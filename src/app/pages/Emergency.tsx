@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { EmergencyTriageOverlay } from '../components/booking/EmergencyTriageOverlay';
 import { useLocationService } from '../hooks/useLocationService';
 import { hospitalDiscoveryService, DiscoveredHospital } from '../services/hospitalDiscovery';
+import { ambulanceDiscoveryService, DiscoveredAmbulance } from '../services/ambulanceDiscovery';
 
 type Step = 'consent' | 'locating' | 'hospitals';
 
@@ -24,6 +25,7 @@ export const Emergency = () => {
   const [locatingProgress, setLocatingProgress] = useState(0);
   const [selectedHospitalId, setSelectedHospitalId] = useState<string | null>(null);
   const [discoveredHospitals, setDiscoveredHospitals] = useState<DiscoveredHospital[]>([]);
+  const [discoveredAmbulances, setDiscoveredAmbulances] = useState<DiscoveredAmbulance[]>([]);
 
   const [showTriageOverlay, setShowTriageOverlay] = useState(false);
   const { getSingleLocation } = useLocationService();
@@ -39,10 +41,14 @@ export const Emergency = () => {
         setLocatingProgress(50);
         
         const hospitals = await hospitalDiscoveryService.discoverEmergencyHospitals(loc.latitude, loc.longitude);
+        setLocatingProgress(75);
+        
+        const ambulances = await ambulanceDiscoveryService.discoverNearbyAmbulances(loc.latitude, loc.longitude);
         setLocatingProgress(100);
         
         if (!isCancelled) {
           setDiscoveredHospitals(hospitals);
+          setDiscoveredAmbulances(ambulances);
           setTimeout(() => setStep('hospitals'), 500);
         }
       } catch (err) {
@@ -55,6 +61,7 @@ export const Emergency = () => {
             calculatedEta: h.eta, 
             calculatedDistance: h.distance 
           })).sort((a, b) => a.calculatedEta - b.calculatedEta));
+          setDiscoveredAmbulances([]);
           setTimeout(() => setStep('hospitals'), 500);
         }
       }
@@ -87,6 +94,11 @@ export const Emergency = () => {
     e.stopPropagation();
     window.location.href = `tel:${phone}`;
     toast.info(`Calling ${name}...`);
+  };
+
+  const handleDispatchAmbulance = (ambulanceId: string, vehicleNum: string) => {
+    toast.success(`Ambulance ${vehicleNum} dispatched! They are on their way.`, { duration: 4000 });
+    // In a real app, we'd also update the backend to mark it as DISPATCHED and route the user to a tracking screen.
   };
 
   return (
@@ -273,8 +285,60 @@ export const Emergency = () => {
               </div>
             </div>
 
-            <div className="flex-1 p-4 space-y-3 pb-6">
-              <div className="flex items-center justify-between mb-1">
+            <div className="flex-1 p-4 space-y-5 pb-6">
+              
+              {/* Ambulances Section */}
+              {discoveredAmbulances.length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-black text-lg text-gray-900">Nearby Ambulances</h3>
+                    <span className="text-[10px] font-black bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                      Live Tracking
+                    </span>
+                  </div>
+                  <div className="space-y-3">
+                    {discoveredAmbulances.slice(0, 2).map((ambulance) => (
+                      <div key={ambulance.id} className="bg-white p-3.5 rounded-2xl border-2 border-blue-100 shadow-sm relative overflow-hidden">
+                        <div className="absolute top-0 right-0 bg-blue-600 text-white text-[9px] font-black px-2.5 py-1 rounded-bl-xl uppercase tracking-widest">
+                          {ambulance.category}
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center shrink-0 border border-blue-100">
+                            <span className="text-xl">🚑</span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-black text-gray-900 text-sm">{ambulance.vehicleNumber}</h4>
+                            <p className="text-xs text-gray-500 font-medium">Driver: {ambulance.driverName}</p>
+                            <p className="text-[10px] text-blue-600 font-bold mt-0.5">{ambulance.calculatedDistance} km away</p>
+                          </div>
+                          <div className="flex flex-col items-center shrink-0">
+                            <span className="text-xl font-black text-blue-600 leading-none">{ambulance.calculatedEta}</span>
+                            <span className="text-[9px] font-black text-blue-400 uppercase tracking-widest">MINS</span>
+                          </div>
+                        </div>
+                        <div className="flex gap-2 mt-3 pt-3 border-t border-blue-50">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleCallHospital(e, ambulance.phone, 'Ambulance Driver'); }}
+                            className="flex-1 py-2 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+                          >
+                            <Phone className="w-3 h-3" /> Call Driver
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDispatchAmbulance(ambulance.id, ambulance.vehicleNumber); }}
+                            className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm shadow-blue-600/20"
+                          >
+                            <Navigation className="w-3 h-3" /> Dispatch Now
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Hospitals Section */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
                 <h3 className="font-black text-lg text-gray-900">{t('nearbyHospitals')}</h3>
                 <div className="flex items-center gap-1.5 text-xs font-bold text-green-600 bg-green-50 px-2.5 py-1 rounded-full border border-green-100">
                   <CheckCircle2 className="w-3 h-3" />
@@ -363,6 +427,7 @@ export const Emergency = () => {
                   </div>
                 </div>
               ))}
+              </div>
             </div>
           </motion.div>
         )}

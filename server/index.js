@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { Hospital } from './models/Hospital.js';
+import { Ambulance } from './models/Ambulance.js';
 
 dotenv.config();
 
@@ -47,6 +48,46 @@ app.get('/api/hospitals/nearby', async (req, res) => {
     ]);
 
     res.json({ success: true, count: hospitals.length, data: hospitals });
+  } catch (error) {
+    console.error('API Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// API Endpoint to find nearby ambulances
+app.get('/api/ambulances/nearby', async (req, res) => {
+  try {
+    const { lat, lng, radius = 20000, category } = req.query;
+
+    if (!lat || !lng) {
+      return res.status(400).json({ error: 'lat and lng are required query parameters' });
+    }
+
+    const maxDistanceMeters = parseInt(radius, 10);
+    const longitude = parseFloat(lng);
+    const latitude = parseFloat(lat);
+    
+    let matchQuery = { status: 'AVAILABLE' };
+    if (category) {
+      matchQuery.category = category;
+    }
+
+    const ambulances = await Ambulance.aggregate([
+      {
+        $geoNear: {
+          near: { type: 'Point', coordinates: [longitude, latitude] },
+          distanceField: 'calculatedDistance', 
+          maxDistance: maxDistanceMeters,
+          query: matchQuery,
+          spherical: true
+        }
+      },
+      {
+        $limit: 10
+      }
+    ]);
+
+    res.json({ success: true, count: ambulances.length, data: ambulances });
   } catch (error) {
     console.error('API Error:', error);
     res.status(500).json({ error: 'Internal server error' });

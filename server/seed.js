@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { Hospital } from './models/Hospital.js';
+import { Ambulance } from './models/Ambulance.js';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -105,17 +106,64 @@ const MOCK_HOSPITALS = [
   }
 ];
 
+const MOCK_AMBULANCES = [
+  {
+    vehicleNumber: 'MH43-AB-1234',
+    driverName: 'Ramesh Kumar',
+    phone: '+919876543210',
+    category: 'ALS',
+    status: 'AVAILABLE',
+    location: { type: 'Point', coordinates: [72.9975, 19.1498] } // Near Airoli
+  },
+  {
+    vehicleNumber: 'MH04-XY-9876',
+    driverName: 'Suresh Patil',
+    phone: '+919876543211',
+    category: 'ICU',
+    status: 'AVAILABLE',
+    location: { type: 'Point', coordinates: [73.0030, 19.1560] } // Near Lifeline
+  },
+  {
+    vehicleNumber: 'MH43-MN-4567',
+    driverName: 'Amit Singh',
+    phone: '+919876543212',
+    category: 'BLS',
+    status: 'AVAILABLE',
+    location: { type: 'Point', coordinates: [72.9805, 19.1405] } // Near Kopar Khairane
+  },
+  {
+    vehicleNumber: 'MH04-KL-3456',
+    driverName: 'Prakash Rao',
+    phone: '+919876543213',
+    category: 'ALS',
+    status: 'DISPATCHED',
+    location: { type: 'Point', coordinates: [73.0120, 19.0720] } // Near Vashi
+  },
+  {
+    vehicleNumber: 'MH43-PQ-8888',
+    driverName: 'Vikram Joshi',
+    phone: '+919876543214',
+    category: 'BLS',
+    status: 'AVAILABLE',
+    location: { type: 'Point', coordinates: [72.9950, 19.1550] } // Near Sector 19 Airoli
+  }
+];
+
 async function seed() {
   try {
     console.log("Connecting to MongoDB...");
     await mongoose.connect(MONGO_URI);
     console.log("✅ Connected");
 
-    console.log("Clearing existing hospitals...");
+    console.log("Clearing existing data...");
     await Hospital.deleteMany({});
+    await Ambulance.deleteMany({});
     
     console.log("Inserting mock hospitals...");
     await Hospital.insertMany(MOCK_HOSPITALS);
+    
+    console.log("Inserting mock ambulances...");
+    await Ambulance.insertMany(MOCK_AMBULANCES);
     
     console.log("✅ Seed completed successfully!");
   } catch (error) {
