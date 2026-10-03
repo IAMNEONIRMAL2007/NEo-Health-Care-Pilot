@@ -1,5 +1,4 @@
 import { Hospital, MOCK_HOSPITALS } from '../constants/mockData';
-import { isMongoConfigured, findNearbyHospitals } from './mongoAtlasClient';
 
 export interface DiscoveredHospital extends Hospital {
   calculatedEta: number; // dynamically calculated ETA in minutes
@@ -20,9 +19,11 @@ export const hospitalDiscoveryService = {
     let emergencyHospitals: Hospital[] = [];
 
     // 1. Filter for emergency capable facilities
-    if (isMongoConfigured) {
-      try {
-        const docs = await findNearbyHospitals(userLat, userLng);
+    try {
+      const response = await fetch(`http://localhost:5000/api/hospitals/nearby?lat=${userLat}&lng=${userLng}&radius=20000`);
+      if (response.ok) {
+        const result = await response.json();
+        const docs = result.data || [];
         
         // Map MongoDB docs to Hospital type
         emergencyHospitals = docs.map((doc: any) => ({
@@ -44,13 +45,12 @@ export const hospitalDiscoveryService = {
           ambulance: doc.ambulance
         }));
         
-        console.log("Fetched hospitals from MongoDB GeoNear:", emergencyHospitals);
-      } catch (e) {
-        console.error("MongoDB fetch failed, falling back to local mocks", e);
-        emergencyHospitals = MOCK_HOSPITALS.filter(h => h.emergency);
+        console.log("Fetched hospitals from MongoDB GeoNear API:", emergencyHospitals);
+      } else {
+        throw new Error("Express API returned non-OK");
       }
-    } else {
-      // Fallback to local data
+    } catch (e) {
+      console.error("MongoDB Express API fetch failed, falling back to local mocks", e);
       emergencyHospitals = MOCK_HOSPITALS.filter(h => h.emergency);
     }
 
