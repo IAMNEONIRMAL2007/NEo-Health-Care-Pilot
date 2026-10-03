@@ -355,6 +355,50 @@ Supported ambulance categories include:
 
 ---
 
+## 🌏 11. India-wide Emergency Intelligence
+
+The platform uses a dedicated **Location-Aware Emergency Intelligence** layer to scale from pilot regions to India-wide support.
+
+### 🏥 Hospital recommendation
+
+When the user activates **SOS**, the platform uses their current location to discover nearby emergency-capable facilities:
+
+- Hospital name, Distance, and Estimated travel time
+- Emergency department availability
+- Hospital contact information and Directions
+- Available emergency services and Ambulance availability (BLS / ALS / ICU)
+
+The system shows **relevant factual criteria** (distance, capacity, ETA) and lets the user or emergency workflow choose the best facility.
+
+### 🇮🇳 India-wide architecture
+
+```mermaid
+flowchart TD
+    A["📱 User Device"] --> B["📍 Location Permission"]
+    B --> C["GPS / Device Location"]
+
+    C --> D["🗺️ Location Service"]
+
+    D --> E["🏥 Hospital Discovery"]
+    D --> F["🚑 Ambulance Discovery"]
+    D --> G["📏 Distance / ETA"]
+
+    E --> H["🚨 Emergency Hospital List"]
+    F --> I["🚑 Ambulance Options"]
+    G --> H
+
+    H --> J["🚨 SOS Dashboard"]
+    I --> J
+
+    J --> K["📍 Live Location Sharing"]
+    K --> L["🏥 Selected Emergency Facility"]
+```
+
+### 🔐 Privacy Design
+Location tracking is **not** continuous. In normal mode, it triggers only for location-based services. In emergency mode, it shares live location for the active SOS session and stops when the session ends.
+
+---
+
 # 🏗️ System Architecture
 
 The platform follows a modular architecture so individual healthcare capabilities can evolve independently.
@@ -471,6 +515,18 @@ flowchart LR
 |---|---|---|
 | ACC-9 | Dynamic SOS Dashboard | 📋 Planned |
 | ACC-10 | Ambulance Live Tracking | 📋 Planned |
+
+---
+
+## 🟣 Phase 4 — 🌏 India-wide Emergency Intelligence
+
+| ID | Feature | Status |
+|---|---|---|
+| ACC-11 | India-wide Location Service | 📋 Planned |
+| ACC-12 | Emergency Hospital Discovery | 📋 Planned |
+| ACC-13 | Live Emergency Location Sharing | 📋 Planned |
+| ACC-14 | Location-Aware Ambulance Discovery | 📋 Planned |
+| ACC-15 | India-wide Healthcare Directory | 📋 Planned |
 
 ---
 
@@ -673,6 +729,11 @@ Test scenarios should include:
 | ACC-8 | Pharmacy handoff |
 | ACC-9 | Emergency location coordination |
 | ACC-10 | Live ambulance tracking |
+| ACC-11 | Granular India-wide location permission |
+| ACC-12 | Nearby hospital discovery by distance/ETA |
+| ACC-13 | Live location sharing during SOS |
+| ACC-14 | Location-aware ambulance discovery |
+| ACC-15 | State/City/Neighborhood healthcare directory |
 
 ---
 

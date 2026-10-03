@@ -92,6 +92,41 @@ This backlog translates the strategic roadmap into concrete **Epics** and **User
 
 ***
 
+## 🟣 Epic 5: 🌏 India-wide Emergency Intelligence [Phase 4 – T4]
+**Value:** Location-aware coordination, scaling the platform beyond a single pilot region.
+
+- **ACC‑11: India-wide Location Service**  
+  - *As a user, I want to share my device location so that the platform can provide location-aware healthcare services anywhere in India.*
+  **Acceptance Criteria:**
+  - Granular location permissions (Normal vs Emergency mode).
+  - Ability to manually select location/address if permission denied.
+
+- **ACC‑12: Emergency Hospital Discovery**  
+  - *As an emergency user, I want to see nearby emergency-capable hospitals based on my current location so that I can quickly identify available options.*
+  **Acceptance Criteria:**
+  - Query nearby facilities based on current coordinates.
+  - Display distance, ETA, and emergency department availability.
+
+- **ACC‑13: Live Emergency Location Sharing**  
+  - *As an emergency user, I want my live location shared during an active SOS session so that the selected emergency provider can coordinate my arrival.*
+  **Acceptance Criteria:**
+  - Start continuous location sharing upon SOS confirmation.
+  - Automatically stop sharing when emergency session ends.
+
+- **ACC‑14: Location-Aware Ambulance Discovery**  
+  - *As an emergency user, I want to discover relevant ambulance services near my location and view available ETA/service information.*
+  **Acceptance Criteria:**
+  - Discover and display ambulances (BLS/ALS/ICU) within a specific radius.
+  - Show live availability and ETA.
+
+- **ACC‑15: India-wide Healthcare Directory**  
+  - *As a user anywhere in India, I want to discover nearby hospitals, clinics, pharmacies, and emergency services based on my location.*
+  **Acceptance Criteria:**
+  - Scalable regional database structure (State > City > Neighborhood).
+  - Search and filter by distance and specialty.
+
+***
+
 ## ⚙️ Non-Functional Requirements (NFRs)
 - **Response Time**: All emergency features (`ACC-9`, `ACC-10`) must load and trigger within ≤ 2 seconds on 3G-class networks.
 - **Availability**: Offline token viewing (`ACC-3`) must work with 100% reliability even in airplane mode.
