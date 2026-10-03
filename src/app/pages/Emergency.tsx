@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { EmergencyTriageOverlay } from '../components/booking/EmergencyTriageOverlay';
+import { useLocationService } from '../hooks/useLocationService';
+import { hospitalDiscoveryService, DiscoveredHospital } from '../services/hospitalDiscovery';
 
 type Step = 'consent' | 'locating' | 'hospitals';
 
@@ -21,24 +23,46 @@ export const Emergency = () => {
   const [isChecked, setIsChecked] = useState(false);
   const [locatingProgress, setLocatingProgress] = useState(0);
   const [selectedHospitalId, setSelectedHospitalId] = useState<string | null>(null);
+  const [discoveredHospitals, setDiscoveredHospitals] = useState<DiscoveredHospital[]>([]);
 
-  const sortedHospitals = [...MOCK_HOSPITALS].sort((a, b) => a.eta - b.eta);
   const [showTriageOverlay, setShowTriageOverlay] = useState(false);
+  const { getSingleLocation } = useLocationService();
 
   useEffect(() => {
     if (step !== 'locating') return;
-    const interval = setInterval(() => {
-      setLocatingProgress(p => {
-        if (p >= 100) {
-          clearInterval(interval);
-          setStep('hospitals');
-          return 100;
+    let isCancelled = false;
+
+    const discover = async () => {
+      try {
+        setLocatingProgress(20);
+        const loc = await getSingleLocation();
+        setLocatingProgress(50);
+        
+        const hospitals = await hospitalDiscoveryService.discoverEmergencyHospitals(loc.latitude, loc.longitude);
+        setLocatingProgress(100);
+        
+        if (!isCancelled) {
+          setDiscoveredHospitals(hospitals);
+          setTimeout(() => setStep('hospitals'), 500);
         }
-        return p + 8;
-      });
-    }, 120);
-    return () => clearInterval(interval);
-  }, [step]);
+      } catch (err) {
+        toast.error("Could not determine live ETA. Using fallback data.");
+        setLocatingProgress(100);
+        if (!isCancelled) {
+          // Fallback to static
+          setDiscoveredHospitals(MOCK_HOSPITALS.filter(h => h.emergency).map(h => ({ 
+            ...h, 
+            calculatedEta: h.eta, 
+            calculatedDistance: h.distance 
+          })).sort((a, b) => a.calculatedEta - b.calculatedEta));
+          setTimeout(() => setStep('hospitals'), 500);
+        }
+      }
+    };
+    
+    discover();
+    return () => { isCancelled = true; };
+  }, [step, getSingleLocation]);
 
   const handleConsent = () => {
     if (!isChecked) return;
@@ -54,7 +78,9 @@ export const Emergency = () => {
   };
 
   const handleSendToNearest = () => {
-    handleSelectHospital(sortedHospitals[0].id);
+    if (discoveredHospitals.length > 0) {
+      handleSelectHospital(discoveredHospitals[0].id);
+    }
   };
 
   const handleCallHospital = (e: React.MouseEvent, phone: string, name: string) => {
@@ -228,7 +254,7 @@ export const Emergency = () => {
                 </div>
               </div>
               {/* Hospital dots */}
-              {sortedHospitals.slice(0, 3).map((h, i) => (
+              {discoveredHospitals.slice(0, 3).map((h, i) => (
                 <div
                   key={h.id}
                   className="absolute"
@@ -265,7 +291,7 @@ export const Emergency = () => {
                 {t('sendToNearest')}
               </button>
 
-              {sortedHospitals.map((hospital, index) => (
+              {discoveredHospitals.map((hospital, index) => (
                 <div
                   key={hospital.id}
                   onClick={() => handleSelectHospital(hospital.id)}
@@ -315,9 +341,9 @@ export const Emergency = () => {
                     </div>
 
                     <div className="flex flex-col items-center bg-red-50 px-3 py-2 rounded-xl border border-red-100 shrink-0">
-                      <span className="text-2xl font-black text-red-600 leading-none">{hospital.eta}</span>
+                      <span className="text-2xl font-black text-red-600 leading-none">{hospital.calculatedEta}</span>
                       <span className="text-[9px] font-black text-red-400 uppercase tracking-widest">{t('etaMins')}</span>
-                      <span className="text-[9px] text-gray-400 font-medium mt-1">{hospital.distance} km</span>
+                      <span className="text-[9px] text-gray-400 font-medium mt-1">{hospital.calculatedDistance} km</span>
                     </div>
                   </div>
 

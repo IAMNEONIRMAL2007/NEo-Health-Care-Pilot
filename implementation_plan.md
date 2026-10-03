@@ -11,7 +11,7 @@ To handle India-wide scaling using **100% free and open-source tools**, the foll
 - **Location & Geocoding**: HTML5 `navigator.geolocation` API + **Nominatim (OpenStreetMap)** for free geocoding/reverse-geocoding.
 - **Mapping & UI**: **React Leaflet** utilizing **OpenStreetMap (OSM)** tiles for rendering live maps without API costs.
 - **Routing & ETA**: **OSRM (Open Source Routing Machine)** public API or **OpenRouteService** for calculating driving distances and ETAs for free.
-- **Geospatial Database & Real-Time**: **Supabase** (Open-source Firebase alternative). It provides PostgreSQL with the **PostGIS** extension for advanced radius/bounds queries, plus **Supabase Realtime** for live SOS WebSockets—all on a generous free tier.
+- **Geospatial Database & Real-Time**: **MongoDB Atlas**. It provides native **2dsphere** geospatial indexing for advanced radius/bounds queries, plus Atlas Data API for frontend access—all on a generous free tier.
 
 ---
 
@@ -20,26 +20,31 @@ To handle India-wide scaling using **100% free and open-source tools**, the foll
 Instead of a flat list, the database will move to a geospatial indexed model. 
 
 ### Facility Model (Hospitals, Clinics, Ambulances)
-```typescript
-interface HealthcareFacility {
-  id: string;
-  name: string;
-  type: 'HOSPITAL' | 'CLINIC' | 'PHARMACY';
-  emergencyCapacity: boolean;
-  address: {
-    state: string;
-    city: string;
-    neighborhood: string;
-    fullText: string;
-  };
-  location: {
-    lat: number;
-    lng: number;
-    geohash: string; // Crucial for fast regional queries
-  };
-  contact: string;
+Using MongoDB with a `2dsphere` index for fast spatial queries.
+```json
+{
+  "_id": "ObjectId",
+  "name": "Lifeline Multi-Specialty Hospital",
+  "type": "HOSPITAL",
+  "emergencyCapacity": true,
+  "address": {
+    "state": "Maharashtra",
+    "city": "Navi Mumbai",
+    "neighborhood": "Airoli",
+    "fullText": "Sector 15, Airoli, Navi Mumbai 400708"
+  },
+  "location": {
+    "type": "Point",
+    "coordinates": [73.0031, 19.1563]
+  },
+  "contact": "+912227661234"
 }
 ```
+
+**Migration Plan:**
+1. Setup a free MongoDB Atlas Cluster.
+2. Enable MongoDB Atlas Data API for serverless HTTP access from the frontend (or setup a Node.js backend).
+3. Create a `2dsphere` index on the `location` field.
 
 ---
 
@@ -54,7 +59,7 @@ interface HealthcareFacility {
 
 ### Step 2: Emergency Hospital Discovery (ACC-12)
 **Goal:** Query and sort hospitals by ETA.
-1. When SOS is triggered, query the database for `HealthcareFacility` documents where `emergencyCapacity == true` and the `geohash` is within a 10-20km radius.
+1. When SOS is triggered, query MongoDB using `$near` or `$geoNear` to find `emergencyCapacity == true` within a 10-20km radius.
 2. Pass the results to the **OSRM API / OpenRouteService** to calculate real-time driving ETAs.
 3. Sort and render the "Emergency Hospital List" showing distance and ETA.
 
@@ -69,7 +74,7 @@ interface HealthcareFacility {
 **Goal:** Secure, real-time location stream to the selected hospital/ambulance.
 1. Generate an `EmergencySession` document in the database with a unique, secure token.
 2. The user's device pushes coordinates to this document every 3-5 seconds using `watchPosition()`.
-3. The selected hospital/ambulance subscribes to this document (via Supabase Realtime / WebSockets) to render the patient on a live map.
+3. The selected hospital/ambulance subscribes to this document (via MongoDB Change Streams / WebSockets) to render the patient on a live map.
 4. **Privacy trigger:** The session auto-deletes when marked as "Resolved" or after 2 hours.
 
 ---
