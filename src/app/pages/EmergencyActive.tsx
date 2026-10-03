@@ -9,23 +9,47 @@ import {
   MapPin, AlertTriangle, CheckCircle2, Wifi, WifiOff, Share2
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { liveEmergencyService } from '../services/liveEmergencyService';
+import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+
+const patientIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+
+const hospitalIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
 
 export const EmergencyActive = () => {
   const { t } = useLanguage();
   const navigate = useNavigate();
-  const locationState = useLocation().state as { hospitalId?: string } | null;
+  const locationState = useLocation().state as { hospitalId?: string; ambulanceId?: string } | null;
   const { activeEmergency, stopEmergency } = useAppState();
 
-  const hospitalId = locationState?.hospitalId || activeEmergency?.hospitalId || 'h1';
-  const hospital = MOCK_HOSPITALS.find(h => h.id === hospitalId) || MOCK_HOSPITALS[0];
+  const hospitalId = locationState?.hospitalId || activeEmergency?.hospitalId;
+  const ambulanceId = locationState?.ambulanceId;
+  const hospital = hospitalId ? MOCK_HOSPITALS.find(h => h.id === hospitalId) : MOCK_HOSPITALS[0];
 
-  const [eta, setEta] = useState(hospital.eta);
+  const [eta, setEta] = useState(hospital ? hospital.eta : 10);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancelCountdown, setCancelCountdown] = useState(30);
   const [isOnline, setIsOnline] = useState(true);
   const [locationUpdates, setLocationUpdates] = useState(0);
-  const [dotPos, setDotPos] = useState({ x: 30, y: 40 });
-  const animFrameRef = useRef<NodeJS.Timeout | null>(null);
+  const [patientLocation, setPatientLocation] = useState<[number, number] | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [routeCoordinates, setRouteCoordinates] = useState<[number, number][]>([]);
 
   // Simulate ETA countdown
   useEffect(() => {
@@ -35,23 +59,66 @@ export const EmergencyActive = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // Simulate location updates
+  // Start live session and location updates
   useEffect(() => {
-    const timer = setInterval(() => {
-      setLocationUpdates(n => n + 1);
-      // Move dot slightly toward hospital
-      setDotPos(prev => ({
-        x: Math.min(prev.x + 0.5, 55),
-        y: Math.min(prev.y + 0.3, 58),
-      }));
-      // Toggle online/offline for realism
-      if (Math.random() > 0.92) {
-        setIsOnline(false);
-        setTimeout(() => setIsOnline(true), 1500);
-      }
-    }, 5000);
-    return () => clearInterval(timer);
-  }, []);
+    let currentSessionId: string | null = null;
+    let watchId: number | null = null;
+
+    const initSession = async () => {
+      // 1. Get initial location
+      navigator.geolocation.getCurrentPosition(async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        setPatientLocation([latitude, longitude]);
+        
+        // Fetch initial route
+        if (hospital?.lat && hospital?.lng) {
+          try {
+            const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${longitude},${latitude};${hospital.lng},${hospital.lat}?overview=full&geometries=geojson`);
+            const data = await res.json();
+            if (data.routes && data.routes[0]) {
+              // OSRM returns [lng, lat], Leaflet needs [lat, lng]
+              const coords = data.routes[0].geometry.coordinates.map((c: [number, number]) => [c[1], c[0]]);
+              setRouteCoordinates(coords);
+            }
+          } catch (e) {
+            console.error("OSRM Route Error:", e);
+          }
+        }
+
+        // 2. Start session on backend
+        currentSessionId = await liveEmergencyService.startSession(latitude, longitude, {
+          hospitalId,
+          ambulanceId
+        });
+        
+        if (currentSessionId) {
+          setSessionId(currentSessionId);
+          console.log("Emergency Session Started:", currentSessionId);
+
+          // 3. Watch location and push updates
+          watchId = navigator.geolocation.watchPosition(
+            async (newPos) => {
+              setLocationUpdates(n => n + 1);
+              setIsOnline(true);
+              setPatientLocation([newPos.coords.latitude, newPos.coords.longitude]);
+              await liveEmergencyService.updateLocation(currentSessionId!, newPos.coords.latitude, newPos.coords.longitude);
+            },
+            (err) => {
+              console.error("Watch location error:", err);
+              setIsOnline(false);
+            },
+            { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
+          );
+        }
+      });
+    };
+
+    initSession();
+
+    return () => {
+      if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+    };
+  }, [hospitalId, ambulanceId]);
 
   // Cancel countdown
   useEffect(() => {
@@ -85,7 +152,10 @@ export const EmergencyActive = () => {
     }
   };
 
-  const handleCancel = (reason: 'arrived' | 'cancelled' | 'false_alarm') => {
+  const handleCancel = async (reason: 'arrived' | 'cancelled' | 'false_alarm') => {
+    if (sessionId) {
+      await liveEmergencyService.resolveSession(sessionId);
+    }
     stopEmergency(reason);
     toast.success(
       reason === 'arrived' ? 'Marked as arrived. Stay safe!' :
@@ -157,69 +227,35 @@ export const EmergencyActive = () => {
       </div>
 
       {/* Map area */}
-      <div className="flex-1 relative bg-gray-900 overflow-hidden">
-        {/* Grid map background */}
-        <div
-          className="absolute inset-0 opacity-[0.07]"
-          style={{
-            backgroundImage: 'radial-gradient(circle, #6b7280 1px, transparent 1px)',
-            backgroundSize: '20px 20px',
-          }}
-        />
-        {/* Road lines */}
-        <div className="absolute top-[50%] left-0 right-0 h-3 bg-gray-700/40 -translate-y-1/2" />
-        <div className="absolute top-0 bottom-0 left-[50%] w-3 bg-gray-700/30 -translate-x-1/2" />
-        <div className="absolute top-[30%] left-0 right-0 h-2 bg-gray-700/20 -translate-y-1/2 rotate-12" />
-
-        {/* Route line */}
-        <svg className="absolute inset-0 w-full h-full" style={{ overflow: 'visible' }}>
-          <defs>
-            <linearGradient id="routeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.8" />
-              <stop offset="100%" stopColor="#ef4444" stopOpacity="0.8" />
-            </linearGradient>
-          </defs>
-          <line
-            x1={`${dotPos.x}%`} y1={`${dotPos.y}%`}
-            x2="65%" y2="62%"
-            stroke="url(#routeGrad)"
-            strokeWidth="2"
-            strokeDasharray="6 4"
-            opacity="0.7"
-          />
-        </svg>
-
-        {/* User dot */}
-        <motion.div
-          className="absolute"
-          style={{ left: `${dotPos.x}%`, top: `${dotPos.y}%` }}
-          animate={{ x: [-1, 1, -1], y: [-1, 0.5, -1] }}
-          transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-        >
-          <div className="relative -translate-x-1/2 -translate-y-1/2">
-            <motion.div
-              animate={{ scale: [1, 2.5], opacity: [0.5, 0] }}
-              transition={{ duration: 2, repeat: Infinity }}
-              className="absolute inset-0 bg-blue-500 rounded-full w-7 h-7"
+      <div className="flex-1 relative bg-gray-900 overflow-hidden z-0">
+        {patientLocation ? (
+          <MapContainer 
+            center={patientLocation} 
+            zoom={14} 
+            style={{ height: '100%', width: '100%', opacity: 0.8 }}
+            zoomControl={false}
+          >
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
-            <div className="w-7 h-7 bg-blue-500 border-4 border-gray-950 rounded-full shadow-lg shadow-blue-500/50 relative z-10" />
-            <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 text-blue-400 text-[9px] font-bold px-2 py-0.5 rounded-full border border-gray-700 whitespace-nowrap shadow">
-              You
-            </div>
+            <Marker position={patientLocation} icon={patientIcon}>
+              <Popup>Your Location</Popup>
+            </Marker>
+            {hospital && hospital.lat && hospital.lng && (
+              <Marker position={[hospital.lat, hospital.lng]} icon={hospitalIcon}>
+                <Popup>{hospital.name}</Popup>
+              </Marker>
+            )}
+            {routeCoordinates.length > 0 && (
+              <Polyline positions={routeCoordinates} color="#ef4444" weight={5} opacity={0.7} dashArray="10, 10" className="animate-pulse" />
+            )}
+          </MapContainer>
+        ) : (
+          <div className="w-full h-full bg-slate-900 flex items-center justify-center text-gray-400">
+            Locating...
           </div>
-        </motion.div>
-
-        {/* Hospital dot */}
-        <div className="absolute" style={{ left: '65%', top: '62%' }}>
-          <div className="relative -translate-x-1/2 -translate-y-1/2">
-            <div className="w-7 h-7 bg-red-500 border-4 border-gray-950 rounded-full shadow-lg shadow-red-500/50 flex items-center justify-center relative z-10">
-              <span className="text-[8px] font-black text-white">H</span>
-            </div>
-            <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 text-red-400 text-[9px] font-bold px-2 py-0.5 rounded-full border border-gray-700 whitespace-nowrap shadow">
-              Hospital
-            </div>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Bottom action panel */}

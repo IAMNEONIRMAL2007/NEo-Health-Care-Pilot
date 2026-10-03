@@ -96,9 +96,10 @@ export const Emergency = () => {
     toast.info(`Calling ${name}...`);
   };
 
-  const handleDispatchAmbulance = (ambulanceId: string, vehicleNum: string) => {
+  const handleDispatchAmbulance = async (ambulanceId: string, vehicleNum: string) => {
     toast.success(`Ambulance ${vehicleNum} dispatched! They are on their way.`, { duration: 4000 });
-    // In a real app, we'd also update the backend to mark it as DISPATCHED and route the user to a tracking screen.
+    startEmergency(undefined); // Sets active emergency in state without hospital
+    navigate('/emergency-active', { state: { ambulanceId } });
   };
 
   return (

@@ -4,6 +4,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { Hospital } from './models/Hospital.js';
 import { Ambulance } from './models/Ambulance.js';
+import { EmergencySession } from './models/EmergencySession.js';
 
 dotenv.config();
 
@@ -88,6 +89,82 @@ app.get('/api/ambulances/nearby', async (req, res) => {
     ]);
 
     res.json({ success: true, count: ambulances.length, data: ambulances });
+  } catch (error) {
+    console.error('API Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Start an Emergency Session
+app.post('/api/emergency/start', async (req, res) => {
+  try {
+    const { hospitalId, ambulanceId, lat, lng } = req.body;
+    
+    if (!lat || !lng) {
+      return res.status(400).json({ error: 'Initial lat and lng are required' });
+    }
+
+    const session = new EmergencySession({
+      hospitalId,
+      ambulanceId,
+      location: {
+        type: 'Point',
+        coordinates: [parseFloat(lng), parseFloat(lat)]
+      }
+    });
+
+    await session.save();
+    res.json({ success: true, sessionId: session._id });
+  } catch (error) {
+    console.error('API Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Update Live Location
+app.post('/api/emergency/:id/location', async (req, res) => {
+  try {
+    const { lat, lng } = req.body;
+    const { id } = req.params;
+
+    if (!lat || !lng) {
+      return res.status(400).json({ error: 'lat and lng are required' });
+    }
+
+    const session = await EmergencySession.findByIdAndUpdate(id, {
+      $set: {
+        location: {
+          type: 'Point',
+          coordinates: [parseFloat(lng), parseFloat(lat)]
+        }
+      }
+    }, { new: true });
+
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('API Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Resolve Emergency
+app.post('/api/emergency/:id/resolve', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const session = await EmergencySession.findByIdAndUpdate(id, {
+      $set: { status: 'RESOLVED' }
+    });
+
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    res.json({ success: true });
   } catch (error) {
     console.error('API Error:', error);
     res.status(500).json({ error: 'Internal server error' });

@@ -15,7 +15,7 @@ export type UserToken = Token & {
 
 export type ActiveEmergency = {
   sessionId: string;
-  hospitalId: string;
+  hospitalId?: string;
   startedAt: string;
   status: 'active' | 'cancelled' | 'arrived' | 'false_alarm';
 };
@@ -61,7 +61,7 @@ type AppStateContextType = {
 
   // Emergency session
   activeEmergency: ActiveEmergency | null;
-  startEmergency: (hospitalId: string) => ActiveEmergency;
+  startEmergency: (hospitalId?: string) => ActiveEmergency;
   stopEmergency: (reason: 'arrived' | 'cancelled' | 'false_alarm') => void;
 
   // Leave-now journey
@@ -351,7 +351,7 @@ export const AppStateProvider = ({ children }: { children: ReactNode }) => {
     toast.success(`Referral to ${toDept} created.`);
   }, []);
 
-  const startEmergency = useCallback((hospitalId: string): ActiveEmergency => {
+  const startEmergency = useCallback((hospitalId?: string): ActiveEmergency => {
     const session: ActiveEmergency = {
       sessionId: `sess_${Date.now()}`,
       hospitalId,
