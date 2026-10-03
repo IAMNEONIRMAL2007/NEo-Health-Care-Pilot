@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { n8nService } from '../services/n8nService';
+import { LocationPermissionManager } from '../components/emergency/LocationPermissionManager';
 
 const CONSENT_HISTORY = [
   { id: 'c1', type: 'Emergency', date: 'Today, 10:22 AM', text: 'Location shared with NMMC Hospital Airoli', icon: AlertTriangle, color: 'text-red-500', bg: 'bg-red-50' },
@@ -176,6 +177,11 @@ export const Settings = () => {
                 : '🔕 Push notifications are disabled. You may miss important token call alerts.'}
             </p>
           </div>
+        </section>
+
+        {/* Location Permission Manager */}
+        <section className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden p-4">
+          <LocationPermissionManager />
         </section>
 
         {/* Consent History */}
