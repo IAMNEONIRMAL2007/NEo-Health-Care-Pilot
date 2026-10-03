@@ -6,14 +6,12 @@ This document outlines the technical implementation strategy for expanding **NEo
 
 ## 🏗️ 1. Technical Stack Additions
 
-To handle India-wide scaling and real-time geospatial intelligence, the following technologies should be integrated into our existing React + Vite stack:
+To handle India-wide scaling using **100% free and open-source tools**, the following technologies will be integrated into our existing React + Vite stack:
 
-- **Location & Geocoding**: HTML5 `navigator.geolocation` API.
-- **Mapping & Routing**: **Google Maps Platform** (Maps JavaScript API, Places API, Distance Matrix API, and Routes API) for accurate ETA calculations and facility discovery.
-- **Geospatial Database**: 
-  - If using Firebase: **Firestore with GeoFire / GeoHashes** for fast, scalable location-based queries.
-  - If using PostgreSQL: **PostGIS** extension for advanced geospatial queries (State/City bounds).
-- **Real-Time Data**: Firebase Realtime Database or WebSockets for live SOS tracking.
+- **Location & Geocoding**: HTML5 `navigator.geolocation` API + **Nominatim (OpenStreetMap)** for free geocoding/reverse-geocoding.
+- **Mapping & UI**: **React Leaflet** utilizing **OpenStreetMap (OSM)** tiles for rendering live maps without API costs.
+- **Routing & ETA**: **OSRM (Open Source Routing Machine)** public API or **OpenRouteService** for calculating driving distances and ETAs for free.
+- **Geospatial Database & Real-Time**: **Supabase** (Open-source Firebase alternative). It provides PostgreSQL with the **PostGIS** extension for advanced radius/bounds queries, plus **Supabase Realtime** for live SOS WebSockets—all on a generous free tier.
 
 ---
 
@@ -57,7 +55,7 @@ interface HealthcareFacility {
 ### Step 2: Emergency Hospital Discovery (ACC-12)
 **Goal:** Query and sort hospitals by ETA.
 1. When SOS is triggered, query the database for `HealthcareFacility` documents where `emergencyCapacity == true` and the `geohash` is within a 10-20km radius.
-2. Pass the results to the **Google Maps Distance Matrix API** to calculate real-time driving ETAs based on current traffic.
+2. Pass the results to the **OSRM API / OpenRouteService** to calculate real-time driving ETAs.
 3. Sort and render the "Emergency Hospital List" showing distance and ETA.
 
 ### Step 3: Location-Aware Ambulance Discovery (ACC-14)
@@ -71,7 +69,7 @@ interface HealthcareFacility {
 **Goal:** Secure, real-time location stream to the selected hospital/ambulance.
 1. Generate an `EmergencySession` document in the database with a unique, secure token.
 2. The user's device pushes coordinates to this document every 3-5 seconds using `watchPosition()`.
-3. The selected hospital/ambulance subscribes to this document (via WebSockets/Firebase) to render the patient on a live map.
+3. The selected hospital/ambulance subscribes to this document (via Supabase Realtime / WebSockets) to render the patient on a live map.
 4. **Privacy trigger:** The session auto-deletes when marked as "Resolved" or after 2 hours.
 
 ---
