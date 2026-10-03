@@ -241,6 +241,7 @@ export const MOCK_TOKENS: Token[] = [
     age: 45,
     bookedAt: new Date(Date.now() - 45 * 60000).toISOString(),
     type: 'walkin',
+    appointmentTime: 'Walk-in',
     paymentMethod: 'Cash',
     paymentStatus: 'PayAtClinic',
     remindersSent: { sms: false, email: false, whatsapp: false },

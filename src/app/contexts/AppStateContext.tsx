@@ -365,7 +365,7 @@ export const AppStateProvider = ({ children }: { children: ReactNode }) => {
       id: `e_${Date.now()}`,
       patientPhone: '+91 98765 43999',
       patientName: 'Current User',
-      hospitalId,
+      hospitalId: hospitalId || 'unknown',
       eta: Math.floor(Math.random() * 10) + 3,
       area: 'Airoli Sector 6',
       status: 'pending',

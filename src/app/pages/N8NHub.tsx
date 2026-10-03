@@ -507,14 +507,14 @@ export const N8NHub = () => {
                     <g transform="translate(315, 60)">
                       <circle r="16" fill={simStep >= 4 && isSimPathActive(simEvent, 'Slack') ? '#ECFDF5' : '#F8FAFC'} stroke={simStep >= 4 && isSimPathActive(simEvent, 'Slack') ? '#10B981' : '#E2E8F0'} strokeWidth="2" />
                       <text textAnchor="middle" y="4" fontSize="10" fill={simStep >= 4 && isSimPathActive(simEvent, 'Slack') ? '#047857' : '#94A3B8'}>💬</text>
-                      <text textAnchor="left" x="22" y="3" fontSize="9" fontWeight="bold" fill={simStep >= 4 && isSimPathActive(simEvent, 'Slack') ? '#065F46' : '#64748B'}>Slack</text>
+                      <text textAnchor="start" x="22" y="3" fontSize="9" fontWeight="bold" fill={simStep >= 4 && isSimPathActive(simEvent, 'Slack') ? '#065F46' : '#64748B'}>Slack</text>
                     </g>
 
                     {/* Node 5: Twilio */}
                     <g transform="translate(315, 100)">
                       <circle r="16" fill={simStep >= 4 && isSimPathActive(simEvent, 'Twilio') ? '#ECFDF5' : '#F8FAFC'} stroke={simStep >= 4 && isSimPathActive(simEvent, 'Twilio') ? '#10B981' : '#E2E8F0'} strokeWidth="2" />
                       <text textAnchor="middle" y="4" fontSize="10" fill={simStep >= 4 && isSimPathActive(simEvent, 'Twilio') ? '#047857' : '#94A3B8'}>✉️</text>
-                      <text textAnchor="left" x="22" y="3" fontSize="9" fontWeight="bold" fill={simStep >= 4 && isSimPathActive(simEvent, 'Twilio') ? '#065F46' : '#64748B'}>Twilio</text>
+                      <text textAnchor="start" x="22" y="3" fontSize="9" fontWeight="bold" fill={simStep >= 4 && isSimPathActive(simEvent, 'Twilio') ? '#065F46' : '#64748B'}>Twilio</text>
                     </g>
 
                     {/* Node 6: Sheets/Email */}
@@ -523,7 +523,7 @@ export const N8NHub = () => {
                       <text textAnchor="middle" y="4" fontSize="10" fill={simStep >= 4 && isSimPathActive(simEvent, 'Sheets') ? '#047857' : '#94A3B8'}>
                         {simEvent === 'patient_served' ? '📧' : '📊'}
                       </text>
-                      <text textAnchor="left" x="22" y="3" fontSize="9" fontWeight="bold" fill={simStep >= 4 && isSimPathActive(simEvent, 'Sheets') ? '#065F46' : '#64748B'}>
+                      <text textAnchor="start" x="22" y="3" fontSize="9" fontWeight="bold" fill={simStep >= 4 && isSimPathActive(simEvent, 'Sheets') ? '#065F46' : '#64748B'}>
                         {simEvent === 'patient_served' ? 'Email' : 'Sheets'}
                       </text>
                     </g>
@@ -742,7 +742,7 @@ export const N8NHub = () => {
 };
 
 // Sub-components
-const TabButton = ({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) => (
+const TabButton = ({ active, onClick, icon, label, badge }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string; badge?: number }) => (
   <button
     onClick={onClick}
     className={`py-3 px-2 flex items-center gap-1.5 border-b-2 text-xs font-black transition-all relative outline-none whitespace-nowrap flex-1 justify-center ${
@@ -750,7 +750,14 @@ const TabButton = ({ active, onClick, icon, label }: { active: boolean; onClick:
     }`}
   >
     {icon}
-    <span>{label}</span>
+    <span className="relative">
+      {label}
+      {badge !== undefined && badge > 0 && (
+        <span className="absolute -top-1 -right-3 bg-orange-500 text-white text-[9px] font-black w-3.5 h-3.5 rounded-full flex items-center justify-center">
+          {badge}
+        </span>
+      )}
+    </span>
   </button>
 );
 

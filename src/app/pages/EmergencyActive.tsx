@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAppState } from '../contexts/AppStateContext';
 import { motion, AnimatePresence } from 'motion/react';
-import { MOCK_HOSPITALS, AMBULANCE_NUMBER } from '../constants/mockData';
+
 import {
   PhoneCall, XCircle, ShieldCheck, HeartPulse,
   MapPin, AlertTriangle, CheckCircle2, Wifi, WifiOff, Share2
@@ -13,6 +13,8 @@ import { liveEmergencyService } from '../services/liveEmergencyService';
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+import { MOCK_HOSPITALS, Hospital } from '../constants/mockData';
+const AMBULANCE_NUMBER = '108';
 
 const patientIcon = new L.Icon({
   iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
@@ -40,7 +42,7 @@ export const EmergencyActive = () => {
 
   const hospitalId = locationState?.hospitalId || activeEmergency?.hospitalId;
   const ambulanceId = locationState?.ambulanceId;
-  const hospital = hospitalId ? MOCK_HOSPITALS.find(h => h.id === hospitalId) : MOCK_HOSPITALS[0];
+  const hospital = (hospitalId ? MOCK_HOSPITALS.find((h: Hospital) => h.id === hospitalId) : MOCK_HOSPITALS[0]) || MOCK_HOSPITALS[0];
 
   const [eta, setEta] = useState(hospital ? hospital.eta : 10);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
@@ -54,7 +56,7 @@ export const EmergencyActive = () => {
   // Simulate ETA countdown
   useEffect(() => {
     const timer = setInterval(() => {
-      setEta(prev => Math.max(0, prev - 1));
+      setEta((prev: number) => Math.max(0, prev - 1));
     }, 30000); // fast demo: every 30s
     return () => clearInterval(timer);
   }, []);
@@ -122,7 +124,7 @@ export const EmergencyActive = () => {
 
   // Cancel countdown
   useEffect(() => {
-    let cancelTimer: NodeJS.Timeout;
+    let cancelTimer: ReturnType<typeof setInterval>;
     if (showCancelConfirm && cancelCountdown > 0) {
       cancelTimer = setInterval(() => setCancelCountdown(c => c - 1), 1000);
     } else if (cancelCountdown === 0) {

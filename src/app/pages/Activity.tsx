@@ -39,8 +39,8 @@ export const Activity = () => {
     type: 'token' as const,
     title: tk.doctorName || 'Doctor',
     subtitle: `${tk.department} • ${tk.hospitalName}`,
-    status: tk.status === 'completed' ? 'completed' as const :
-            tk.status === 'missed' ? 'missed' as const : 'completed' as const,
+    status: tk.status === 'Completed' ? 'completed' as const :
+            tk.status === 'NoShow' ? 'missed' as const : 'completed' as const,
     date: new Date(tk.bookedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
   }));
 

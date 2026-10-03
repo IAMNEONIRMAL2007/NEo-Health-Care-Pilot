@@ -190,6 +190,7 @@ const TokenCard = ({
   onGetDirections: (hospitalId: string) => void;
   onShareETA: (token: Token) => void;
   onCallHospital: (hospitalId: string) => void;
+  onChat: (name: string) => void;
   highlighted: boolean;
 }) => {
   const { t } = useLanguage();
@@ -333,7 +334,7 @@ const TokenCard = ({
         </div>
 
         <button
-          onClick={() => onChat(token.hospitalName)}
+          onClick={() => onChat(token.hospitalName || 'Clinic')}
           className="w-full mt-3 py-3 border-2 border-dashed border-gray-100 rounded-2xl flex items-center justify-center gap-2 text-xs font-bold text-gray-500 hover:border-blue-200 hover:text-blue-600 hover:bg-blue-50/30 transition-all active:scale-[0.98]"
         >
           <MessageSquare className="w-4 h-4" />
