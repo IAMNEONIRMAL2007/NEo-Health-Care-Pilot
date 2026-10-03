@@ -20,7 +20,7 @@ class AmbulanceDiscoveryService {
     let ambulances: DiscoveredAmbulance[] = [];
 
     try {
-      const url = new URL('http://localhost:5000/api/ambulances/nearby');
+      const url = new URL(`http://${window.location.hostname}:5000/api/ambulances/nearby`);
       url.searchParams.append('lat', userLat.toString());
       url.searchParams.append('lng', userLng.toString());
       url.searchParams.append('radius', '30000');

@@ -20,7 +20,7 @@ export const hospitalDiscoveryService = {
 
     // 1. Filter for emergency capable facilities
     try {
-      const response = await fetch(`http://localhost:5000/api/hospitals/nearby?lat=${userLat}&lng=${userLng}&radius=20000`);
+      const response = await fetch(`http://${window.location.hostname}:5000/api/hospitals/nearby?lat=${userLat}&lng=${userLng}&radius=20000`);
       if (response.ok) {
         const result = await response.json();
         const docs = result.data || [];

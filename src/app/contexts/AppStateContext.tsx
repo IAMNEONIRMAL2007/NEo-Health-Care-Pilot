@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import { EmergencyAlert, MOCK_TOKENS, MOCK_EMERGENCIES } from '../constants/mockData';
 import { Token, TokenStatus, Referral } from '../types/token';
-import { PatientProfile, MOCK_FAMILY_MEMBERS } from '../types/patient';
+import { PatientProfile, MOCK_FAMILY_MEMBERS, DeviceProfile } from '../types/patient';
 import { ReminderService } from '../services/ReminderService';
 import { WellnessLog, WellnessMetricType } from '../types/wellness';
 import { CommunityAlert, MOCK_COMMUNITY_ALERTS } from '../constants/communityData';
@@ -18,6 +18,12 @@ export type ActiveEmergency = {
   hospitalId?: string;
   startedAt: string;
   status: 'active' | 'cancelled' | 'arrived' | 'false_alarm';
+};
+
+export type UserLocation = {
+  lat: number;
+  lng: number;
+  address?: string;
 };
 
 export type ActiveJourney = {
@@ -44,6 +50,14 @@ type AppStateContextType = {
   notificationsEnabled: boolean;
   setNotificationsEnabled: (v: boolean) => void;
   isOffline: boolean;
+
+  // Device Profile
+  deviceProfile: DeviceProfile | null;
+  setDeviceProfile: (profile: DeviceProfile | null) => void;
+
+  // Location
+  userLocation: UserLocation | null;
+  setUserLocation: (loc: UserLocation | null) => void;
 
   // Family / Patients
   familyMembers: PatientProfile[];
@@ -128,6 +142,34 @@ export const AppStateProvider = ({ children }: { children: ReactNode }) => {
   const [notificationsEnabled, setNotificationsEnabled] = React.useState(true);
   const [userRole, setUserRole] = React.useState<'Doctor' | 'Reception' | 'Patient' | null>(null);
   const [isOffline, setIsOffline] = React.useState(!navigator.onLine);
+
+  const [deviceProfile, setDeviceProfileState] = useState<DeviceProfile | null>(() => {
+    const saved = localStorage.getItem('acc_device_profile');
+    return saved ? JSON.parse(saved) : null;
+  });
+
+  const setDeviceProfile = useCallback((profile: DeviceProfile | null) => {
+    setDeviceProfileState(profile);
+    if (profile) {
+      localStorage.setItem('acc_device_profile', JSON.stringify(profile));
+    } else {
+      localStorage.removeItem('acc_device_profile');
+    }
+  }, []);
+
+  const [userLocation, setUserLocationState] = useState<UserLocation | null>(() => {
+    const saved = localStorage.getItem('acc_user_location');
+    return saved ? JSON.parse(saved) : null;
+  });
+
+  const setUserLocation = useCallback((loc: UserLocation | null) => {
+    setUserLocationState(loc);
+    if (loc) {
+      localStorage.setItem('acc_user_location', JSON.stringify(loc));
+    } else {
+      localStorage.removeItem('acc_user_location');
+    }
+  }, []);
   const [familyMembers, setFamilyMembers] = React.useState<PatientProfile[]>(MOCK_FAMILY_MEMBERS);
   const [currentPatientId, setCurrentPatientId] = React.useState<string>(MOCK_FAMILY_MEMBERS[0].id);
   const [wellnessLogs, setWellnessLogs] = React.useState<WellnessLog[]>([]);
@@ -482,6 +524,10 @@ export const AppStateProvider = ({ children }: { children: ReactNode }) => {
         notificationsEnabled,
         setNotificationsEnabled,
         isOffline,
+        deviceProfile,
+        setDeviceProfile,
+        userLocation,
+        setUserLocation,
         familyMembers,
         currentPatientId,
         setCurrentPatientId,

@@ -1,104 +1,126 @@
 import mongoose from 'mongoose';
-import { Hospital } from './models/Hospital.js';
+import { HealthcareProvider } from './models/HealthcareProvider.js';
 import { Ambulance } from './models/Ambulance.js';
 import dotenv from 'dotenv';
 dotenv.config();
 
-// The connection string provided by the user
 const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://nirmalborole49_db_user:LmG9Bx2cB7UWlYit@cluster0.tquqf0z.mongodb.net/?appName=Cluster0";
 
-// Standard mock hospitals used in the frontend converted to GeoJSON schema
-const MOCK_HOSPITALS = [
+const MOCK_PROVIDERS = [
   {
     name: 'NMMC Hospital Airoli',
-    shortName: 'NMMC Airoli',
-    rating: 4.6,
-    reviewCount: 832,
-    eta: 5,
-    distance: '1.2',
+    type: 'HOSPITAL',
+    emergencyServices: true,
+    specialties: ['General Physician', 'Orthopedics', 'Pediatrics', 'Cardiology', 'ENT', 'Gynecology'],
     phone: '+912227688000',
-    address: 'Sector 8, Airoli, Navi Mumbai 400708',
-    emergency: true,
-    departments: ['General Physician', 'Orthopedics', 'Pediatrics', 'Cardiology', 'ENT', 'Gynecology'],
-    verified: true,
-    beds: 200,
-    ambulance: true,
+    source: 'SEED',
+    address: {
+      street: 'Sector 8',
+      locality: 'Airoli',
+      city: 'Navi Mumbai',
+      district: 'Thane',
+      state: 'Maharashtra',
+      pincode: '400708',
+      fullText: 'Sector 8, Airoli, Navi Mumbai 400708'
+    },
     location: {
       type: 'Point',
       coordinates: [72.9974, 19.1497] // [lng, lat]
-    }
+    },
+    // Adding some extra properties mapped in the schema dynamically if needed
+    rating: 4.6,
+    reviewCount: 832,
+    beds: 200,
+    ambulance: true,
   },
   {
     name: 'Lifeline Multi-Specialty Hospital',
-    shortName: 'Lifeline Hospital',
-    rating: 4.4,
-    reviewCount: 524,
-    eta: 8,
-    distance: '2.4',
+    type: 'HOSPITAL',
+    emergencyServices: true,
+    specialties: ['General Physician', 'Pediatrics', 'Orthopedics', 'Neurology', 'Dermatology'],
     phone: '+912227661234',
-    address: 'Sector 15, Airoli, Navi Mumbai 400708',
-    emergency: true,
-    departments: ['General Physician', 'Pediatrics', 'Orthopedics', 'Neurology', 'Dermatology'],
-    verified: true,
-    beds: 150,
-    ambulance: true,
+    source: 'SEED',
+    address: {
+      street: 'Sector 15',
+      locality: 'Airoli',
+      city: 'Navi Mumbai',
+      state: 'Maharashtra',
+      fullText: 'Sector 15, Airoli, Navi Mumbai 400708'
+    },
     location: {
       type: 'Point',
       coordinates: [73.0031, 19.1563]
-    }
-  },
-  {
-    name: 'Thane Civil Hospital',
-    shortName: 'Thane Civil',
-    rating: 4.1,
-    reviewCount: 1204,
-    eta: 12,
-    distance: '3.8',
-    phone: '+912225342181',
-    address: 'Sector 5, Kopar Khairane, Navi Mumbai 400709',
-    emergency: true,
-    departments: ['General Physician', 'Surgery', 'Pediatrics', 'Orthopedics', 'Ophthalmology', 'ENT'],
-    verified: true,
-    beds: 500,
-    ambulance: true,
-    location: {
-      type: 'Point',
-      coordinates: [72.9800, 19.1400]
-    }
+    },
+    rating: 4.4,
+    beds: 150
   },
   {
     name: 'Sunrise Care Clinic',
-    shortName: 'Sunrise Clinic',
-    rating: 4.0,
-    reviewCount: 189,
-    eta: 15,
-    distance: '4.5',
+    type: 'CLINIC',
+    emergencyServices: false,
+    specialties: ['General Physician', 'Pediatrics'],
     phone: '+919821001234',
-    address: 'Sector 19, Airoli, Navi Mumbai 400708',
-    emergency: false,
-    departments: ['General Physician', 'Pediatrics', 'Gynecology', 'Dermatology'],
-    verified: true,
-    beds: 40,
-    ambulance: false,
+    source: 'SEED',
+    address: {
+      locality: 'Airoli',
+      city: 'Navi Mumbai',
+      state: 'Maharashtra',
+      fullText: 'Sector 19, Airoli, Navi Mumbai'
+    },
     location: {
       type: 'Point',
       coordinates: [72.9955, 19.1553]
     }
   },
   {
+    name: 'Apollo Pharmacy Airoli',
+    type: 'PHARMACY',
+    emergencyServices: false,
+    phone: '+919821009999',
+    source: 'SEED',
+    address: {
+      locality: 'Airoli',
+      city: 'Navi Mumbai',
+      state: 'Maharashtra',
+      fullText: 'Sector 3, Airoli'
+    },
+    location: {
+      type: 'Point',
+      coordinates: [72.9985, 19.1500]
+    }
+  },
+  {
+    name: 'Thane Civil Hospital',
+    type: 'HOSPITAL',
+    emergencyServices: true,
+    specialties: ['General Physician', 'Surgery', 'Pediatrics', 'Orthopedics'],
+    phone: '+912225342181',
+    source: 'SEED',
+    address: {
+      locality: 'Thane West',
+      city: 'Thane',
+      state: 'Maharashtra',
+      fullText: 'Thane West, Maharashtra'
+    },
+    location: {
+      type: 'Point',
+      coordinates: [72.9800, 19.1400]
+    },
+    beds: 500
+  },
+  {
     name: 'MGM Hospital Vashi',
-    shortName: 'MGM Vashi',
-    rating: 4.7,
-    reviewCount: 2103,
-    eta: 22,
-    distance: '8.1',
+    type: 'HOSPITAL',
+    emergencyServices: true,
+    specialties: ['Cardiology', 'Neurology', 'Oncology', 'Orthopedics'],
     phone: '+912227564900',
-    address: 'Sector 1A, Vashi, Navi Mumbai 400703',
-    emergency: true,
-    departments: ['Cardiology', 'Neurology', 'Oncology', 'Orthopedics', 'Nephrology', 'General Physician', 'Gynecology'],
-    verified: true,
-    beds: 750,
-    ambulance: true,
+    source: 'SEED',
+    address: {
+      locality: 'Vashi',
+      city: 'Navi Mumbai',
+      state: 'Maharashtra',
+      fullText: 'Sector 1A, Vashi, Navi Mumbai'
+    },
     location: {
       type: 'Point',
       coordinates: [73.0125, 19.0725]
@@ -113,7 +135,7 @@ const MOCK_AMBULANCES = [
     phone: '+919876543210',
     category: 'ALS',
     status: 'AVAILABLE',
-    location: { type: 'Point', coordinates: [72.9975, 19.1498] } // Near Airoli
+    location: { type: 'Point', coordinates: [72.9975, 19.1498] }
   },
   {
     vehicleNumber: 'MH04-XY-9876',
@@ -121,7 +143,7 @@ const MOCK_AMBULANCES = [
     phone: '+919876543211',
     category: 'ICU',
     status: 'AVAILABLE',
-    location: { type: 'Point', coordinates: [73.0030, 19.1560] } // Near Lifeline
+    location: { type: 'Point', coordinates: [73.0030, 19.1560] }
   },
   {
     vehicleNumber: 'MH43-MN-4567',
@@ -129,23 +151,7 @@ const MOCK_AMBULANCES = [
     phone: '+919876543212',
     category: 'BLS',
     status: 'AVAILABLE',
-    location: { type: 'Point', coordinates: [72.9805, 19.1405] } // Near Kopar Khairane
-  },
-  {
-    vehicleNumber: 'MH04-KL-3456',
-    driverName: 'Prakash Rao',
-    phone: '+919876543213',
-    category: 'ALS',
-    status: 'DISPATCHED',
-    location: { type: 'Point', coordinates: [73.0120, 19.0720] } // Near Vashi
-  },
-  {
-    vehicleNumber: 'MH43-PQ-8888',
-    driverName: 'Vikram Joshi',
-    phone: '+919876543214',
-    category: 'BLS',
-    status: 'AVAILABLE',
-    location: { type: 'Point', coordinates: [72.9950, 19.1550] } // Near Sector 19 Airoli
+    location: { type: 'Point', coordinates: [72.9805, 19.1405] }
   }
 ];
 
@@ -155,12 +161,12 @@ async function seed() {
     await mongoose.connect(MONGO_URI);
     console.log("✅ Connected");
 
-    console.log("Clearing existing data...");
-    await Hospital.deleteMany({});
+    console.log("Clearing existing HealthcareProvider and Ambulance data...");
+    await HealthcareProvider.deleteMany({});
     await Ambulance.deleteMany({});
     
-    console.log("Inserting mock hospitals...");
-    await Hospital.insertMany(MOCK_HOSPITALS);
+    console.log("Inserting mock healthcare providers...");
+    await HealthcareProvider.insertMany(MOCK_PROVIDERS);
     
     console.log("Inserting mock ambulances...");
     await Ambulance.insertMany(MOCK_AMBULANCES);

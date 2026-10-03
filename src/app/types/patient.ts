@@ -10,6 +10,11 @@ export interface PatientProfile {
   dob?: string;
 }
 
+export interface DeviceProfile {
+  deviceProfileId: string;
+  displayName: string;
+}
+
 export const MOCK_FAMILY_MEMBERS: PatientProfile[] = [
   {
     id: 'p_1',

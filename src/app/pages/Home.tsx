@@ -21,21 +21,48 @@ const statusConfig = {
 export const Home = () => {
   const { t } = useLanguage();
   const navigate = useNavigate();
-  const { userTokens, activeEmergency } = useAppState();
+  const { userTokens, activeEmergency, deviceProfile, userLocation } = useAppState();
+
+  useEffect(() => {
+    if (!deviceProfile) {
+      navigate('/', { replace: true });
+    }
+  }, [deviceProfile, navigate]);
 
   const calledToken = userTokens.find(tk => tk.status === 'Arrived');
   const waitingCount = userTokens.filter(tk => tk.status === 'Booked' || tk.status === 'Arrived').length;
 
-  const nearestHospital = MOCK_HOSPITALS[0];
+  const [nearbyHospitals, setNearbyHospitals] = useState<any[]>([]);
+  const [isLoadingHospitals, setIsLoadingHospitals] = useState(false);
+
+  useEffect(() => {
+    if (userLocation) {
+      setIsLoadingHospitals(true);
+      fetch(`http://${window.location.hostname}:5000/api/healthcare/nearby?lat=${userLocation.lat}&lng=${userLocation.lng}&type=HOSPITAL`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            setNearbyHospitals(data.data);
+          }
+        })
+        .catch(console.error)
+        .finally(() => setIsLoadingHospitals(false));
+    }
+  }, [userLocation]);
+
+  const nearestHospital = nearbyHospitals.length > 0 ? nearbyHospitals[0] : MOCK_HOSPITALS[0];
 
   return (
     <div className="flex flex-col flex-1 bg-gray-50 pb-6">
       {/* Header greeting */}
       <div className="bg-white px-6 pt-5 pb-4 border-b border-gray-100">
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Airoli, Navi Mumbai</p>
+          <div className="flex items-center gap-1 mb-1">
+             <MapPin className="w-3 h-3 text-red-500" />
+             <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">{userLocation ? 'Location Active' : 'Location Not Set'}</p>
+          </div>
           <h1 className="text-2xl font-black text-gray-900 leading-tight">
-            {t('hello')}, Rohan <span className="text-xl">👋</span>
+            {t('hello')}, {deviceProfile?.displayName || 'Guest'} <span className="text-xl">👋</span>
           </h1>
           <p className="text-sm font-medium text-gray-500 mt-0.5">{t('homeSubtitle')}</p>
         </motion.div>
@@ -103,7 +130,9 @@ export const Home = () => {
           </p>
           <div className="relative z-10 mt-4 flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-full border border-white/20">
             <MapPin className="w-3.5 h-3.5 text-red-200" />
-            <span className="text-[10px] font-bold text-red-100 uppercase tracking-widest">Nearest: {nearestHospital.shortName} • {nearestHospital.eta} mins</span>
+            <span className="text-[10px] font-bold text-red-100 uppercase tracking-widest">
+               Nearest: {nearestHospital?.name || nearestHospital?.shortName} • {nearestHospital?.calculatedDistance ? Math.round(nearestHospital.calculatedDistance/1000) + ' km' : (nearestHospital?.eta + ' mins')}
+            </span>
           </div>
         </motion.button>
 
@@ -120,26 +149,34 @@ export const Home = () => {
               <Building2 className="w-4 h-4 text-gray-400" />
               Nearby Hospitals
             </h3>
-            <span className="text-[10px] font-bold text-gray-400">{MOCK_HOSPITALS.length} available</span>
+            <span className="text-[10px] font-bold text-gray-400">{nearbyHospitals.length || MOCK_HOSPITALS.length} available</span>
           </div>
           <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1" style={{ scrollbarWidth: 'none' }}>
-            {MOCK_HOSPITALS.slice(0, 3).map(hospital => (
-              <motion.button
-                key={hospital.id}
-                whileTap={{ scale: 0.97 }}
-                onClick={() => navigate(`/hospital/${hospital.id}`)}
-                className="shrink-0 w-48 bg-white rounded-2xl p-3 border border-gray-100 shadow-sm text-left"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-1 text-yellow-500 text-xs font-bold">
-                    <Star className="w-3 h-3 fill-current" /> {hospital.rating}
+            {isLoadingHospitals ? (
+               <div className="text-sm text-gray-500 font-medium">Finding healthcare near you...</div>
+            ) : (
+              (nearbyHospitals.length > 0 ? nearbyHospitals : MOCK_HOSPITALS).slice(0, 5).map(hospital => (
+                <motion.button
+                  key={hospital._id || hospital.id}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => navigate(`/hospital/${hospital._id || hospital.id}`)}
+                  className="shrink-0 w-56 bg-white rounded-2xl p-3 border border-gray-100 shadow-sm text-left flex flex-col justify-between h-28"
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-1 text-yellow-500 text-xs font-bold">
+                      <Star className="w-3 h-3 fill-current" /> {hospital.rating || 4.5}
+                    </div>
+                    {hospital.emergencyServices && (
+                       <span className="text-[9px] font-bold text-red-500 bg-red-50 px-1.5 py-0.5 rounded">Emergency</span>
+                    )}
                   </div>
-                  <span className="text-[9px] font-bold text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded">{hospital.eta} min</span>
-                </div>
-                <p className="font-bold text-gray-900 text-xs leading-tight mb-0.5 truncate">{hospital.shortName}</p>
-                <p className="text-[10px] text-gray-400 font-medium truncate">{hospital.distance} km • {hospital.beds} beds</p>
-              </motion.button>
-            ))}
+                  <p className="font-bold text-gray-900 text-xs leading-tight mb-1 line-clamp-2">{hospital.name || hospital.shortName}</p>
+                  <p className="text-[10px] text-gray-400 font-medium truncate">
+                    {hospital.calculatedDistance ? (hospital.calculatedDistance / 1000).toFixed(1) + ' km' : hospital.distance + ' km'} • {hospital.address ? hospital.address.split(',')[0] : 'Navi Mumbai'}
+                  </p>
+                </motion.button>
+              ))
+            )}
           </div>
         </div>
 

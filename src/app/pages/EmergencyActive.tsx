@@ -42,9 +42,45 @@ export const EmergencyActive = () => {
 
   const hospitalId = locationState?.hospitalId || activeEmergency?.hospitalId;
   const ambulanceId = locationState?.ambulanceId;
-  const hospital = (hospitalId ? MOCK_HOSPITALS.find((h: Hospital) => h.id === hospitalId) : MOCK_HOSPITALS[0]) || MOCK_HOSPITALS[0];
 
-  const [eta, setEta] = useState(hospital ? hospital.eta : 10);
+  const [hospital, setHospital] = useState<any>(null);
+  const [eta, setEta] = useState(10);
+
+  useEffect(() => {
+    if (hospitalId) {
+      fetch(`http://${window.location.hostname}:5000/api/healthcare/${hospitalId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.data) {
+            const doc = data.data;
+            const h = {
+              id: doc._id,
+              name: doc.name,
+              shortName: doc.shortName || doc.name,
+              lat: doc.location.coordinates[1],
+              lng: doc.location.coordinates[0],
+              phone: doc.phone,
+              address: doc.address,
+              eta: doc.eta || 10
+            };
+            setHospital(h);
+            setEta(h.eta);
+          } else {
+            const fallback = MOCK_HOSPITALS.find((h: Hospital) => h.id === hospitalId) || MOCK_HOSPITALS[0];
+            setHospital(fallback);
+            setEta(fallback.eta);
+          }
+        })
+        .catch(() => {
+          const fallback = MOCK_HOSPITALS.find((h: Hospital) => h.id === hospitalId) || MOCK_HOSPITALS[0];
+          setHospital(fallback);
+          setEta(fallback.eta);
+        });
+    } else {
+      setHospital(MOCK_HOSPITALS[0]);
+      setEta(MOCK_HOSPITALS[0].eta);
+    }
+  }, [hospitalId]);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancelCountdown, setCancelCountdown] = useState(30);
   const [isOnline, setIsOnline] = useState(true);
@@ -205,10 +241,10 @@ export const EmergencyActive = () => {
         <div className="bg-gray-800 rounded-2xl p-4 border border-gray-700">
           <div className="flex items-start justify-between">
             <div className="flex-1 min-w-0 pr-4">
-              <h3 className="font-black text-lg text-white leading-tight mb-1">{hospital.name}</h3>
+              <h3 className="font-black text-lg text-white leading-tight mb-1">{hospital?.name || hospital?.shortName || ''}</h3>
               <div className="flex items-center gap-1.5 text-xs text-gray-400 font-medium mb-3">
                 <MapPin className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">{hospital.address}</span>
+                <span className="truncate">{hospital?.address || ''}</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-1.5 text-xs font-bold text-green-400">
@@ -246,7 +282,7 @@ export const EmergencyActive = () => {
             </Marker>
             {hospital && hospital.lat && hospital.lng && (
               <Marker position={[hospital.lat, hospital.lng]} icon={hospitalIcon}>
-                <Popup>{hospital.name}</Popup>
+                <Popup>{hospital.name || hospital.shortName}</Popup>
               </Marker>
             )}
             {routeCoordinates.length > 0 && (

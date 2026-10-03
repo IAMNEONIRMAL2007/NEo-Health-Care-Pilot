@@ -1,6 +1,6 @@
 import { createBrowserRouter } from 'react-router';
 import { Layout } from './components/Layout';
-import { Splash } from './pages/Splash';
+import { Onboarding } from './pages/Onboarding';
 import { Home } from './pages/Home';
 import { Emergency } from './pages/Emergency';
 import { EmergencyActive } from './pages/EmergencyActive';
@@ -25,7 +25,7 @@ export const router = createBrowserRouter([
     path: '/',
     Component: Layout,
     children: [
-      { index: true, Component: Splash },
+      { index: true, Component: Onboarding },
       { path: 'home', Component: Home },
       { path: 'emergency', Component: Emergency },
       { path: 'emergency-active', Component: EmergencyActive },
